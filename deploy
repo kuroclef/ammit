@@ -1,0 +1,27 @@
+#!/bin/bash
+
+sudo pacman -Sy --noconfirm --needed ruby
+[ "$(command -v bundler)" ] || gem install bundler
+
+cd "$(dirname "$(readlink -f "$0")")"
+[ -d .bundle ] || bundle install --path=.bundle
+
+unitdir=/usr/lib/systemd/system
+mkdir -p "$unitdir"
+
+sudo tee "$unitdir"/ammit@.service <<EOF
+[Unit]
+Description=Ammit -- An automated tweet eraser.
+
+[Service]
+ExecStart=/bin/sh -c 'cd ~/${PWD#/home/*/}; exec ./ammit.rb'
+Restart=on-failure
+RestartSec=60
+User=%i
+Group=%i
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl --now enable ammit@"$(whoami)".service
